@@ -1,0 +1,31 @@
+#!/bin/bash
+
+set -euxo pipefail
+
+CONFLUENCE_HOME=/var/atlassian/application-data/confluence
+
+if [ ! -d $CONFLUENCE_HOME -a ! -L $CONFLUENCE_HOME ]; then
+    mkdir -p $CONFLUENCE_HOME
+fi
+
+if ! getent group confluence >/dev/null; then
+    groupadd \
+        --system \
+        confluence
+fi
+
+if ! getent passwd confluence >/dev/null; then
+    useradd \
+        --system \
+        --gid confluence \
+        --home-dir $CONFLUENCE_HOME \
+        --no-create-home \
+        --shell /usr/sbin/nologin \
+        confluence
+fi
+
+chown -Rf confluence:confluence $CONFLUENCE_HOME
+
+#DEBHELPER#
+
+exit 0

@@ -1,0 +1,2 @@
+lib/systemd/system/confluence.service
+opt/atlassian/confluence
