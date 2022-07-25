@@ -1,8 +1,8 @@
 ------------------------------------------------------------------------------
-Atlassian Confluence 7.13.8 - Standalone README
+Atlassian Confluence 7.17.5 - Standalone README
 ------------------------------------------------------------------------------
 
-Thank you for downloading Confluence 7.13.8 - Standalone distribution.  This
+Thank you for downloading Confluence 7.17.5 - Standalone distribution.  This
 distribution comes with a built-in Tomcat 9.0.63 web server and hsql
 database, so it runs (almost) out the box.
 
