@@ -1,0 +1,55 @@
+diff --git a/confluence/bin/setenv.sh b/confluence/bin/setenv.sh
+index 985040c..8cc639c 100755
+--- a/confluence/bin/setenv.sh
++++ b/confluence/bin/setenv.sh
+@@ -1,3 +1,8 @@
++#!/bin/bash
++
++CONFLUENCE_HOME="/var/atlassian/application-data/confluence"
++CONFLUENCE_CATALINA="/opt/atlassian/confluence"
++
+ #-----------------------------------------------------------------------------------
+ # See the CATALINA_OPTS below for tuning the JVM arguments used to start Confluence
+ #-----------------------------------------------------------------------------------
+@@ -73,7 +78,7 @@ echo "--------------------------------------------------------------------------
+ #-----------------------------------------------------------------------------------
+ 
+ # Set the Java heap size
+-CATALINA_OPTS="-Xms1024m -Xmx1024m ${CATALINA_OPTS}"
++CATALINA_OPTS="-Xms2048m -Xmx2048m ${CATALINA_OPTS}"
+ 
+ # Default values for small to medium size instances
+ CATALINA_OPTS="-XX:ReservedCodeCacheSize=256m ${CATALINA_OPTS}"
+@@ -113,6 +118,13 @@ CATALINA_OPTS="-Dsynchrony.enable.xhr.fallback=true ${CATALINA_OPTS}"
+ CATALINA_OPTS="-Djava.locale.providers=JRE,SPI,CLDR ${CATALINA_OPTS}"
+ CATALINA_OPTS="-Dconfluence.context.path=${CONFLUENCE_CONTEXT_PATH} ${CATALINA_OPTS}"
+ CATALINA_OPTS="-Dorg.apache.tomcat.websocket.DEFAULT_BUFFER_SIZE=32768 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Djobs.limit.per.purge=1048576 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dall.jobs.ttl.hours=72 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dunsuccessful.jobs.ttl.hours=24 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.home=${CONFLUENCE_HOME} ${CATALINA_OPTS}"
++CATALINA_OPTS="-XX:+UnlockExperimentalVMOptions ${CATALINA_OPTS}"
++CATALINA_OPTS="-XX:+UseCGroupMemoryLimitForHeap ${CATALINA_OPTS}"
++CATALINA_OPTS="-XX:MaxRAMFraction=1 ${CATALINA_OPTS}"
+ CATALINA_OPTS="${START_CONFLUENCE_JAVA_OPTS} ${CATALINA_OPTS}"
+ 
+ export CATALINA_OPTS
+diff --git a/confluence/conf/server.xml b/confluence/conf/server.xml
+index 527bd21..b2e9274 100644
+--- a/confluence/conf/server.xml
++++ b/confluence/conf/server.xml
+@@ -1,3 +1,4 @@
++<?xml version="1.0"?>
+ <Server port="8000" shutdown="SHUTDOWN">
+     <Service name="Tomcat-Standalone">
+         <!--
+@@ -10,7 +11,8 @@
+         <Connector port="8090" connectionTimeout="20000" redirectPort="8443"
+                    maxThreads="48" maxPostSize="16777216" minSpareThreads="10"
+                    enableLookups="false" acceptCount="10" URIEncoding="UTF-8"
+-                   protocol="org.apache.coyote.http11.Http11NioProtocol"/>
++                   protocol="org.apache.coyote.http11.Http11NioProtocol"
++                   scheme="http" secure="false" proxyName="" proxyPort=""/>
+         <!--
+          ==============================================================================================================
+          HTTP - Proxying Confluence via Apache or Nginx over HTTP
