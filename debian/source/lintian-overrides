@@ -1,0 +1,4 @@
+atlassian-confluence source: license-problem-json-evil
+atlassian-confluence source: no-debian-changes
+atlassian-confluence source: source-contains-prebuilt-windows-binary
+atlassian-confluence source: source-is-missing
