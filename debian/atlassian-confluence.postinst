@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -euxo pipefail
+
+CONFLUENCE_CATALINA=/opt/atlassian/confluence
+
+chown -Rf confluence:confluence $CONFLUENCE_CATALINA
+chmod 0700 $CONFLUENCE_CATALINA
+
+#DEBHELPER#
+
+exit 0
