@@ -1,0 +1,40 @@
+#!/usr/bin/make -f
+
+SHELL := /bin/bash
+
+override_dh_auto_build:
+
+override_dh_auto_install:
+	install -Dpm755 -d debian/tmp/lib/systemd/system
+	install -Dpm755 -d debian/tmp/opt/atlassian/confluence
+	cp -rfT confluence debian/tmp/opt/atlassian/confluence
+	install -Dpm644 -t debian/tmp/lib/systemd/system confluence.service
+	chmod a+x debian/tmp/opt/atlassian/confluence/bin/start-confluence.sh
+	chmod a+x debian/tmp/opt/atlassian/confluence/bin/stop-confluence.sh
+	find debian/tmp/opt/atlassian/confluence -type f -name '*.so' -exec chrpath -d {} \;
+	find debian/tmp/opt/atlassian/confluence -type f -name '*.bak' -delete
+	find debian/tmp/opt/atlassian/confluence -type f -name '*.orig' -delete
+	find debian/tmp/opt/atlassian/confluence -type f -name '*.rej' -delete
+	fdupes -qnrps debian/tmp/opt/atlassian/confluence
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod a+x debian/atlassian-confluence/opt/atlassian/confluence/bin/start-confluence.sh
+	chmod a+x debian/atlassian-confluence/opt/atlassian/confluence/bin/stop-confluence.sh
+
+override_dh_strip:
+
+override_dh_strip_nondeterminism:
+
+override_dh_shlibdeps:
+
+override_dh_makeshlibs:
+
+override_dh_dwz:
+
+override_dh_auto_test:
+
+override_dh_auto_clean:
+
+%:
+	dh $@
