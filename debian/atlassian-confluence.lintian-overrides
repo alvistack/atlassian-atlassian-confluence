@@ -1,0 +1,17 @@
+atlassian-confluence: classpath-contains-relative-path
+atlassian-confluence: codeless-jar
+atlassian-confluence: copyright-without-copyright-notice
+atlassian-confluence: description-is-pkg-name
+atlassian-confluence: dir-or-file-in-opt
+atlassian-confluence: embedded-javascript-library
+atlassian-confluence: executable-not-elf-or-script
+atlassian-confluence: initial-upload-closes-no-bugs
+atlassian-confluence: jar-contains-source
+atlassian-confluence: jar-not-in-usr-share
+atlassian-confluence: national-encoding
+atlassian-confluence: non-standard-dir-in-var
+atlassian-confluence: privacy-breach-google-adsense
+atlassian-confluence: shell-script-fails-syntax-check
+atlassian-confluence: unknown-java-class-version
+atlassian-confluence: virtual-package-depends-without-real-package-depends
+atlassian-confluence: zero-byte-file-in-doc-directory
