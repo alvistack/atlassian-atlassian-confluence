@@ -1,0 +1,95 @@
+diff --git a/opt/atlassian/confluence/bin/setenv.sh b/opt/atlassian/confluence/bin/setenv.sh
+index f46b569..122f744 100755
+--- a/opt/atlassian/confluence/bin/setenv.sh
++++ b/opt/atlassian/confluence/bin/setenv.sh
+@@ -1,3 +1,8 @@
++#!/bin/bash
++
++CONFLUENCE_HOME="/var/atlassian/application-data/confluence"
++CONFLUENCE_CATALINA="/opt/atlassian/confluence"
++
+ #-----------------------------------------------------------------------------------
+ # See the CATALINA_OPTS below for tuning the JVM arguments used to start Confluence
+ #-----------------------------------------------------------------------------------
+@@ -71,10 +76,10 @@ echo "--------------------------------------------------------------------------
+ #-----------------------------------------------------------------------------------
+ 
+ # Set the Java heap size
+-CATALINA_OPTS="-Xms1024m -Xmx1024m ${CATALINA_OPTS}"
++CATALINA_OPTS="-Xms2048m -Xmx2048m ${CATALINA_OPTS}"
+ 
+ # Default values for small to medium size instances
+-CATALINA_OPTS="-XX:ReservedCodeCacheSize=256m ${CATALINA_OPTS}"
++CATALINA_OPTS="-XX:ReservedCodeCacheSize=512m ${CATALINA_OPTS}"
+ 
+ # Add various JPMS arguments to allow Confluence to work on Java 17
+ CATALINA_OPTS="@$CATALINA_HOME/confluence/WEB-INF/jpms-args.txt ${CATALINA_OPTS}"
+@@ -105,13 +110,22 @@ CATALINA_OPTS="@$CATALINA_HOME/confluence/WEB-INF/jpms-args.txt ${CATALINA_OPTS}
+ #-----------------------------------------------------------------------------------
+ 
+ CATALINA_OPTS="-XX:+IgnoreUnrecognizedVMOptions ${CATALINA_OPTS}"
+-CATALINA_OPTS="-XX:G1ReservePercent=20 -XX:+UseG1GC -XX:+ExplicitGCInvokesConcurrent ${CATALINA_OPTS}"
+-CATALINA_OPTS="-Xlog:gc*:file=$LOGBASEABS/logs/gc-%t.log:tags,time,uptime,level:filecount=5,filesize=2M ${CATALINA_OPTS}"
++CATALINA_OPTS="-XX:+UseZGC -XX:+ExplicitGCInvokesConcurrent ${CATALINA_OPTS}"
++CATALINA_OPTS="-Xlog:gc*,gc+age*=trace:file=$LOGBASEABS/logs/gc-`date +%F_%H-%M-%S`.log:tags,time,uptime,level:filecount=5,filesize=2M ${CATALINA_OPTS}"
+ CATALINA_OPTS="-Djava.awt.headless=true ${CATALINA_OPTS}"
+-CATALINA_OPTS="-Datlassian.plugins.enable.wait=300 ${CATALINA_OPTS}"
+ CATALINA_OPTS="-Dsynchrony.enable.xhr.fallback=true ${CATALINA_OPTS}"
+-CATALINA_OPTS="-Dconfluence.context.path=${CONFLUENCE_CONTEXT_PATH} ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.catalina.connector.port=8090 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.catalina.connector.scheme=http ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.catalina.connector.secure=false ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.catalina.connector.proxyname= ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.catalina.connector.proxyport= ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.catalina.context.path= ${CATALINA_OPTS}"
+ CATALINA_OPTS="-Dorg.apache.tomcat.websocket.DEFAULT_BUFFER_SIZE=32768 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Djobs.limit.per.purge=1048576 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dall.jobs.ttl.hours=72 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dunsuccessful.jobs.ttl.hours=24 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.home=${CONFLUENCE_HOME} ${CATALINA_OPTS}"
++CATALINA_OPTS="-Datlassian.plugins.enable.wait=300 -XX:+UnlockExperimentalVMOptions ${CATALINA_OPTS}"
+ CATALINA_OPTS="${START_CONFLUENCE_JAVA_OPTS} ${CATALINA_OPTS}"
+ 
+ export CATALINA_OPTS
+diff --git a/opt/atlassian/confluence/conf/server.xml b/opt/atlassian/confluence/conf/server.xml
+index 527bd21..67fdbdd 100644
+--- a/opt/atlassian/confluence/conf/server.xml
++++ b/opt/atlassian/confluence/conf/server.xml
+@@ -1,3 +1,4 @@
++<?xml version="1.0"?>
+ <Server port="8000" shutdown="SHUTDOWN">
+     <Service name="Tomcat-Standalone">
+         <!--
+@@ -7,10 +8,12 @@
+          If using a http/https proxy, comment out this connector.
+          ==============================================================================================================
+         -->
+-        <Connector port="8090" connectionTimeout="20000" redirectPort="8443"
++        <Connector port="${confluence.catalina.connector.port}" connectionTimeout="20000" redirectPort="8443"
+                    maxThreads="48" maxPostSize="16777216" minSpareThreads="10"
+                    enableLookups="false" acceptCount="10" URIEncoding="UTF-8"
+-                   protocol="org.apache.coyote.http11.Http11NioProtocol"/>
++                   protocol="org.apache.coyote.http11.Http11NioProtocol"
++                   scheme="${confluence.catalina.connector.scheme}" secure="${confluence.catalina.connector.secure}"
++                   proxyName="${confluence.catalina.connector.proxyname}" proxyPort="${confluence.catalina.connector.proxyport}"/>
+         <!--
+          ==============================================================================================================
+          HTTP - Proxying Confluence via Apache or Nginx over HTTP
+@@ -74,7 +77,7 @@
+ 
+         <Engine name="Standalone" defaultHost="localhost">
+             <Host name="localhost" appBase="webapps" unpackWARs="true" autoDeploy="false" startStopThreads="4">
+-                <Context path="" docBase="../confluence" reloadable="false" useHttpOnly="true">
++                <Context path="${confluence.catalina.context.path}" docBase="../confluence" reloadable="false" useHttpOnly="true">
+                     <!-- Logging configuration for Confluence is specified in confluence/WEB-INF/classes/log4j.properties -->
+                     <Manager pathname=""/>
+                     <Valve className="org.apache.catalina.valves.StuckThreadDetectionValve" threshold="60"/>
+@@ -94,7 +97,7 @@
+                     <Valve className="org.apache.catalina.valves.RemoteIpValve" />
+                 </Context>
+ 
+-                <Context path="${confluence.context.path}/synchrony-proxy" docBase="../synchrony-proxy"
++                <Context path="${confluence.catalina.context.path}/synchrony-proxy" docBase="../synchrony-proxy"
+                          reloadable="false" useHttpOnly="true">
+                     <Valve className="org.apache.catalina.valves.StuckThreadDetectionValve" threshold="60"/>
+                 </Context>
