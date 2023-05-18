@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -euxo pipefail
+
+CONFLUENCE_DOWNLOAD_URL=http://product-downloads.atlassian.com/software/confluence/downloads/atlassian-confluence-7.19.9.tar.gz
+CONFLUENCE_DOWNLOAD_DEST=/tmp/atlassian-confluence-7.19.9.tar.gz
+CONFLUENCE_DOWNLOAD_CHECKSUM=ece19c92b096a960bf48c3500692d3bd26ed18e0c791500d992b9c57efe4d908
+
+CONFLUENCE_CATALINA=/opt/atlassian/confluence
+CONFLUENCE_PATCH=/opt/atlassian/atlassian-confluence.patch
+
+wget -c $CONFLUENCE_DOWNLOAD_URL -O $CONFLUENCE_DOWNLOAD_DEST
+echo -n "$CONFLUENCE_DOWNLOAD_CHECKSUM $CONFLUENCE_DOWNLOAD_DEST" | sha256sum -c -
+
+rm -rf $CONFLUENCE_CATALINA
+mkdir -p $CONFLUENCE_CATALINA
+tar zxf $CONFLUENCE_DOWNLOAD_DEST -C $CONFLUENCE_CATALINA --strip-components=1
+
+cat $CONFLUENCE_PATCH | patch -p1 -d /
+chmod a+x $CONFLUENCE_CATALINA/bin/start-confluence.sh
+chmod a+x $CONFLUENCE_CATALINA/bin/stop-confluence.sh
+find $CONFLUENCE_CATALINA -type f -name '*.so' -exec chrpath -d {} \;
+find $CONFLUENCE_CATALINA -type f -name '*.bak' -delete
+find $CONFLUENCE_CATALINA -type f -name '*.orig' -delete
+find $CONFLUENCE_CATALINA -type f -name '*.rej' -delete
+fdupes -qnrps $CONFLUENCE_CATALINA
+
+chown -Rf confluence:confluence $CONFLUENCE_CATALINA
+chmod 0700 $CONFLUENCE_CATALINA
+
+#DEBHELPER#
+
+exit 0
