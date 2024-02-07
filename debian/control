@@ -2,7 +2,7 @@ Source: atlassian-confluence
 Section: java
 Priority: optional
 Standards-Version: 4.5.0
-Maintainer: Wong Hoi Sing Edison <hswong3i@gmail.com>
+Maintainer: Wong Hoi Sing Edison <hswong3i@pantarei-design.com>
 Homepage: https://www.atlassian.com/software/confluence
 Vcs-Browser: https://github.com/alvistack/atlassian-atlassian-confluence
 Vcs-Git: https://github.com/alvistack/atlassian-atlassian-confluence.git
