@@ -1,0 +1,6 @@
+*.substvars
+*debhelper*
+.debhelper
+atlassian-confluence
+files
+tmp
