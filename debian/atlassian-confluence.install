@@ -1,0 +1,2 @@
+usr/lib/systemd/system/confluence.service
+opt/atlassian/atlassian-confluence.patch
