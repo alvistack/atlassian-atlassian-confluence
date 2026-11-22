@@ -1,0 +1,160 @@
+diff --git a/opt/atlassian/confluence/bin/setenv.sh b/opt/atlassian/confluence/bin/setenv.sh
+index a014317..d6be0bd 100755
+--- a/opt/atlassian/confluence/bin/setenv.sh
++++ b/opt/atlassian/confluence/bin/setenv.sh
+@@ -1,3 +1,8 @@
++#!/bin/bash
++
++CONFLUENCE_HOME="/var/atlassian/application-data/confluence"
++CONFLUENCE_CATALINA="/opt/atlassian/confluence"
++
+ #-----------------------------------------------------------------------------------
+ # See the CATALINA_OPTS below for tuning the JVM arguments used to start Confluence
+ #-----------------------------------------------------------------------------------
+@@ -80,17 +85,17 @@ echo "--------------------------------------------------------------------------
+ #-----------------------------------------------------------------------------------
+ 
+ # Set the Java heap size
+-CATALINA_OPTS="-Xms1024m -Xmx1024m ${CATALINA_OPTS}"
++CATALINA_OPTS="-Xms2048m -Xmx2048m ${CATALINA_OPTS}"
+ 
+ # Default values for small to medium size instances
+-CATALINA_OPTS="-XX:ReservedCodeCacheSize=256m ${CATALINA_OPTS}"
++CATALINA_OPTS="-XX:ReservedCodeCacheSize=512m ${CATALINA_OPTS}"
+ 
+ # Add various JPMS arguments to allow Confluence to work on Java 17
+ CATALINA_OPTS="@$CATALINA_HOME/confluence/WEB-INF/jpms-args.txt ${CATALINA_OPTS}"
+ 
+ # Default garbage collector and its settings
+ if [ -z "${CONFLUENCE_GC_OPTS}" ]; then
+-  CONFLUENCE_GC_OPTS="-XX:G1ReservePercent=20 -XX:+UseG1GC -XX:+ExplicitGCInvokesConcurrent"
++  CONFLUENCE_GC_OPTS="-XX:+UseZGC -XX:ZCollectionInterval=5 -XX:ZAllocationSpikeTolerance=5 -XX:+ExplicitGCInvokesConcurrent"
+ fi
+ 
+ # Default garbage collector log
+@@ -127,10 +132,19 @@ CATALINA_OPTS="-XX:+IgnoreUnrecognizedVMOptions ${CATALINA_OPTS}"
+ CATALINA_OPTS="${CONFLUENCE_GC_OPTS} ${CATALINA_OPTS}"
+ CATALINA_OPTS="${CONFLUENCE_GC_LOG} ${CATALINA_OPTS}"
+ CATALINA_OPTS="-Djava.awt.headless=true ${CATALINA_OPTS}"
+-CATALINA_OPTS="-Datlassian.plugins.enable.wait=300 ${CATALINA_OPTS}"
+ CATALINA_OPTS="-Dsynchrony.enable.xhr.fallback=true ${CATALINA_OPTS}"
+-CATALINA_OPTS="-Dconfluence.context.path=${CONFLUENCE_CONTEXT_PATH} ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.catalina.connector.port=8090 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.catalina.connector.scheme=http ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.catalina.connector.secure=false ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.catalina.connector.proxyname= ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.catalina.connector.proxyport= ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.catalina.context.path= ${CATALINA_OPTS}"
+ CATALINA_OPTS="-Dorg.apache.tomcat.websocket.DEFAULT_BUFFER_SIZE=32768 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Djobs.limit.per.purge=1048576 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dall.jobs.ttl.hours=72 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dunsuccessful.jobs.ttl.hours=24 ${CATALINA_OPTS}"
++CATALINA_OPTS="-Dconfluence.home=${CONFLUENCE_HOME} ${CATALINA_OPTS}"
++CATALINA_OPTS="-Datlassian.plugins.enable.wait=300 -XX:+IgnoreUnrecognizedVMOptions -XX:+UnlockExperimentalVMOptions ${CATALINA_OPTS}"
+ CATALINA_OPTS="${START_CONFLUENCE_JAVA_OPTS} ${CATALINA_OPTS}"
+ 
+ export CATALINA_OPTS
+diff --git a/opt/atlassian/confluence/conf/server.xml b/opt/atlassian/confluence/conf/server.xml
+index 90345ae..83629a0 100644
+--- a/opt/atlassian/confluence/conf/server.xml
++++ b/opt/atlassian/confluence/conf/server.xml
+@@ -1,3 +1,4 @@
++<?xml version="1.0"?>
+ <Server port="8000" shutdown="C0MP13X5HUTD0WN">
+     <Service name="Tomcat-Standalone">
+         <!--
+@@ -7,10 +8,13 @@
+          If using a http/https proxy, comment out this connector.
+          ==============================================================================================================
+         -->
+-        <Connector port="8090" connectionTimeout="20000" redirectPort="8443"
++        <Connector port="${confluence.catalina.connector.port}" connectionTimeout="20000" redirectPort="8443"
+                    maxThreads="48" maxPostSize="16777216" minSpareThreads="10"
+                    enableLookups="false" acceptCount="10" URIEncoding="UTF-8"
+-                   protocol="org.apache.coyote.http11.Http11NioProtocol"/>
++                   protocol="org.apache.coyote.http11.Http11NioProtocol"
++                   relaxedPathChars="[]|" relaxedQueryChars="[]|{}^&#x5c;&#x60;&quot;&lt;&gt;"
++                   scheme="${confluence.catalina.connector.scheme}" secure="${confluence.catalina.connector.secure}"
++                   proxyName="${confluence.catalina.connector.proxyname}" proxyPort="${confluence.catalina.connector.proxyport}"/>
+         <!--
+          ==============================================================================================================
+          HTTP - Proxying Confluence via Apache or Nginx over HTTP
+@@ -74,7 +78,7 @@
+ 
+         <Engine name="Standalone" defaultHost="localhost">
+             <Host name="localhost" appBase="webapps" unpackWARs="true" autoDeploy="false" startStopThreads="4">
+-                <Context path="" docBase="../confluence" reloadable="false" useHttpOnly="true">
++                <Context path="${confluence.catalina.context.path}" docBase="../confluence" reloadable="false" useHttpOnly="true">
+                     <!-- Logging configuration for Confluence is specified in confluence/WEB-INF/classes/log4j.properties -->
+                     <Manager pathname=""/>
+                     <Valve className="org.apache.catalina.valves.StuckThreadDetectionValve" threshold="60"/>
+@@ -94,7 +98,7 @@
+                     <Valve className="org.apache.catalina.valves.RemoteIpValve" />
+                 </Context>
+ 
+-                <Context path="${confluence.context.path}/synchrony-proxy" docBase="../synchrony-proxy"
++                <Context path="${confluence.catalina.context.path}/synchrony-proxy" docBase="../synchrony-proxy"
+                          reloadable="false" useHttpOnly="true">
+                     <Valve className="org.apache.catalina.valves.StuckThreadDetectionValve" threshold="60"/>
+                 </Context>
+diff --git a/opt/atlassian/confluence/conf/web.xml b/opt/atlassian/confluence/conf/web.xml
+index 03616bb..c464ad3 100644
+--- a/opt/atlassian/confluence/conf/web.xml
++++ b/opt/atlassian/confluence/conf/web.xml
+@@ -15,11 +15,11 @@
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ -->
+-<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
++<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+-  xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee
+-                      http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
+-  version="4.0">
++  xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
++                      https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
++  version="6.0">
+ 
+   <!-- ======================== Introduction ============================== -->
+   <!-- This document defines default values for *all* web applications      -->
+@@ -32,6 +32,11 @@
+   <!-- They should go in the "/WEB-INF/web.xml" file in your application.   -->
+ 
+ 
++  <!-- Set the default request and response character encodings to UTF-8.   -->
++  <request-character-encoding>UTF-8</request-character-encoding>
++  <response-character-encoding>UTF-8</response-character-encoding>
++
++
+   <!-- ================== Built In Servlet Definitions ==================== -->
+ 
+ 
+@@ -637,7 +642,11 @@
+   <!-- created sessions by modifying the value below.                       -->
+ 
+     <session-config>
+-        <session-timeout>30</session-timeout>
++        <session-timeout>120</session-timeout>
++        <cookie-config>
++            <max-age>604800</max-age>
++        </cookie-config>
++        <tracking-mode>COOKIE</tracking-mode>
+     </session-config>
+ 
+ 
+diff --git a/opt/atlassian/confluence/confluence/WEB-INF/web.xml b/opt/atlassian/confluence/confluence/WEB-INF/web.xml
+index f6edbe4..9c61809 100644
+--- a/opt/atlassian/confluence/confluence/WEB-INF/web.xml
++++ b/opt/atlassian/confluence/confluence/WEB-INF/web.xml
+@@ -20,7 +20,10 @@
+     </absolute-ordering>
+ 
+     <session-config>
+-        <session-timeout>60</session-timeout>
++        <session-timeout>120</session-timeout>
++        <cookie-config>
++            <max-age>604800</max-age>
++        </cookie-config>
+         <tracking-mode>COOKIE</tracking-mode>
+     </session-config>
+ 
