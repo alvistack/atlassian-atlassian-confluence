@@ -1,0 +1,15 @@
+[Unit]
+Description=Atlassian Confluence
+After=multi-user.target
+Wants=multi-user.target
+
+[Service]
+Type=forking
+User=confluence
+Group=confluence
+ExecStart=/opt/atlassian/confluence/bin/start-confluence.sh
+ExecStop=/opt/atlassian/confluence/bin/stop-confluence.sh
+PIDFile=/opt/atlassian/confluence/work/catalina.pid
+
+[Install]
+WantedBy=multi-user.target
